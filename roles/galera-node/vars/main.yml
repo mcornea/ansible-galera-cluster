@@ -1,0 +1,3 @@
+---
+mysql_root_passwd: "parola1"
+mysql_repl_passwd: "parola2" 

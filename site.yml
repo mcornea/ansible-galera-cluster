@@ -1,0 +1,14 @@
+---
+- name: Gather facts
+  hosts: all
+  remote_user: marius
+  sudo: yes
+  gather_facts: True
+
+- name: Install Galera nodes
+  hosts: galera-cluster
+  remote_user: marius
+  sudo: yes
+
+  roles:
+   - galera-node

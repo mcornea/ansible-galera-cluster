@@ -1,0 +1,68 @@
+---
+- name: Add MariaDB Repo
+  template: src=mariadb.repo.j2 dest=/etc/yum.repos.d/mariadb.repo
+
+- name: Remove iptables rules
+  service: name=iptables state=stopped
+
+- name: Install socat
+  yum: name=http://dl.fedoraproject.org/pub/epel/6/x86_64/socat-1.7.2.3-1.el6.x86_64.rpm state=present
+
+- name: Install MySQL-python
+  yum: name=MySQL-python state=present
+
+- name: Install MariaDB server
+  yum: name=MariaDB-Galera-server state=present
+
+- name: Install MariaDB client
+  yum: name=MariaDB-client state=present
+
+- name: Install rsync
+  yum: name=rsync state=present
+
+- name: Install galera
+  yum: name=galera state=present
+
+- name: Start mysql
+  service: name=mysql state=started enabled=yes 
+
+- name: Change mysql root password
+  mysql_user:
+    name: root 
+    host: "{{ item }}" 
+    password: "{{ mysql_root_passwd }}"
+    login_user: root
+    login_password: "{{ mysql_root_passwd }}"
+    check_implicit_admin: yes
+    priv: "*.*:ALL,GRANT"
+  with_items:
+    - "{{ ansible_hostname }}"
+    - 127.0.0.1
+    - ::1
+    - localhost 
+
+- name: Generate .my.cnf
+  template: src=my.cnf.j2 dest='~/.my.cnf' 
+
+- name: Delete non existing mysql user
+  mysql_user: name='' state=absent
+
+- name: Create replication user
+  mysql_user: name=sst_user password={{ mysql_repl_passwd }} priv=*.*:ALL state=present
+
+- name: Set SELinux in permissive mode
+  selinux: policy=targeted state=permissive
+
+- name: Stop mysql service
+  service: name=mysql state=stopped
+
+- name: Generate Galera cluster config
+  template: src=server.cnf.j2 dest=/etc/my.cnf.d/server.cnf
+
+- name: Initialize first cluster node
+  shell: 'sudo /etc/init.d/mysql start --wsrep-new-cluster'
+  when: firstnode is defined
+
+- name: Start mysql service
+  service: name=mysql state=started
+  when: firstnode is not defined
