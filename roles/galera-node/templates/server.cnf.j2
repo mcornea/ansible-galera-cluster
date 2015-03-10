@@ -33,7 +33,9 @@ innodb_flush_log_at_trx_commit=2
 #innodb_autoinc_lock_mode=2
 #bind-address=0.0.0.0
 wsrep_provider=/usr/lib64/galera/libgalera_smm.so
-wsrep_cluster_address="gcomm://{{ hostvars['galera1'].ansible_eth0.ipv4.address }},{{ hostvars['galera2'].ansible_eth0.ipv4.address }}"
+wsrep_cluster_address="gcomm://{% for node in groups['galera-cluster'] -%}
+{{ hostvars[node]["ansible_eth0"]["ipv4"]["address"] }}{% if not loop.last %},{% endif %}
+{%- endfor %}"
 wsrep_cluster_name='galera_cluster'
 wsrep_node_address='{{ ansible_eth0.ipv4.address }}'
 wsrep_node_name='{{ ansible_hostname }}'
