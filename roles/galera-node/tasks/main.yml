@@ -53,15 +53,21 @@
 - name: Set SELinux in permissive mode
   selinux: policy=targeted state=permissive
 
+- name: Check cluster status
+  shell: mysql -e "show status like 'wsrep_local_state_comment'" | grep wsrep_local_state_comment | awk {'print $2'} | grep Synced
+  register: status
+  ignore_errors: true
+
 - name: Stop mysql service
   service: name=mysql state=stopped
+  when:  status|failed
 
 - name: Generate Galera cluster config
   template: src=server.cnf.j2 dest=/etc/my.cnf.d/server.cnf
 
 - name: Initialize first cluster node
   shell: 'sudo /etc/init.d/mysql start --wsrep-new-cluster'
-  when: firstnode is defined
+  when: firstnode is defined and status|failed
 
 - name: Start mysql service
   service: name=mysql state=started
